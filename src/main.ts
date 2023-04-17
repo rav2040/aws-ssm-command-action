@@ -1,4 +1,4 @@
-import { getBooleanInput, getInput, setOutput, setFailed, info } from "@actions/core";
+import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
 import { SSMClient, SendCommandCommand, GetCommandInvocationCommand } from "@aws-sdk/client-ssm";
 
 const ssm = new SSMClient({});
@@ -19,6 +19,8 @@ async function main() {
             InstanceIds: [instanceId],
             Parameters: { commands: [command] },
         }));
+        
+        debug(`SendCommandOutput: ${JSON.stringify(sendCommandResponse, null, 2)}`);
 
         const commandId = sendCommandResponse.Command?.CommandId;
 
@@ -45,21 +47,23 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
         InstanceId: instanceId,
         CommandId: commandId,
     }));
+    
+    debug(`GetCommandInvocationOutput: ${JSON.stringify(response, null, 2)}`);
 
     if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
-        throw Error(`Remote command invocation ended unexpectedly with status: "${response.Status}"`);
+        info(`Remote command invocation ended unexpectedly with status: "${response.Status}". Standard error content is printed below.`);
+        info("----- BEGIN STDERR CONTENT -----");
+        info(response.StandardOutputContent ?? "");
+        info("----- END STDERR CONTENT -----"); 
+
+        return response.ResponseCode ?? -1;
     }
 
     if (response.Status === "Success") {
-        if (response.ResponseCode === 0) {
-            info("Remote command invocation completed successfully. Standard output content is printed below.\n\n");
-            info(response.StandardOutputContent ?? "");
-        }
-
-        if (response.ResponseCode !== 0) {
-            info(`Remote command invocation completed with a non-zero exit code (${response.ResponseCode}). Standard error content is printed below.\n\n`);
-            info(response.StandardErrorContent ?? "");
-        }
+        info("Remote command invocation completed successfully. Standard output content is printed below.");
+        info("----- BEGIN STDOUT CONTENT -----");
+        info(response.StandardOutputContent ?? "");
+        info("----- END STDOUT CONTENT -----"); 
 
         return response.ResponseCode ?? -1;
     }
