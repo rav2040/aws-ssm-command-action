@@ -53,7 +53,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation ended unexpectedly with status: "${response.Status}". Standard error content is printed below.`);
         info("----- BEGIN STDERR CONTENT -----");
-        info(response.StandardOutputContent ?? "");
+        info((response.StandardErrorContent ?? "").trim());
         info("----- END STDERR CONTENT -----"); 
 
         return response.ResponseCode ?? -1;
@@ -62,7 +62,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     if (response.Status === "Success") {
         info("Remote command invocation completed successfully. Standard output content is printed below.");
         info("----- BEGIN STDOUT CONTENT -----");
-        info(response.StandardOutputContent ?? "");
+        info((response.StandardOutputContent ?? "").trim());
         info("----- END STDOUT CONTENT -----"); 
 
         return response.ResponseCode ?? -1;
