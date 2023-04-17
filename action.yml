@@ -1,0 +1,19 @@
+name: "AWS SSM Command"
+description: "Run shell commands on an EC2 instance remotely via SSM."
+inputs:
+  command:
+    description: The shell command to send.
+    required: true
+  instance-id:
+    description: ID of an EC2 instance running the SSM agent.
+    required: false
+  powershell:
+    description: Use powershell instead of a regular shell.
+    required: false
+    default: false
+outputs:
+  exit-code:
+    description: The exit code of the remote command.
+runs:
+  using: "node16"
+  main: "lib/main.js"
