@@ -54,9 +54,18 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation completed with status: "${response.Status}". Output is printed below.`);
         
-        printStdout(response.StandardOutputContent ?? "");
-        printStderr(response.StandardOutputContent ?? "");
-
+        if (response.StandardOutputContent) {
+            printStdout(response.StandardOutputContent);
+        }
+        
+        if (response.StandardErrorContent) {
+            printStderr(response.StandardErrorContent);
+        }
+        
+        if (!response.StandardOutputContent && !response.StandardOutputContent) {
+            console.info(null);
+        }
+        
         return response.ResponseCode ?? -1;
     }
 
