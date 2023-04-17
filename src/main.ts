@@ -1,8 +1,6 @@
 import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
 import { SSMClient, SendCommandCommand, GetCommandInvocationCommand } from "@aws-sdk/client-ssm";
-
-const CYAN = "\u001b[38;5;6m";
-const RED = "\u001b[38;2;255;0;0m";
+import styles from "ansi-styles";
 
 const ssm = new SSMClient({});
 
@@ -22,7 +20,7 @@ async function main() {
             InstanceIds: [instanceId],
             Parameters: { commands: [command] },
         }));
-        
+
         debug(`SendCommandOutput: ${JSON.stringify(sendCommandResponse, null, 2)}`);
 
         const commandId = sendCommandResponse.Command?.CommandId;
@@ -50,23 +48,27 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
         InstanceId: instanceId,
         CommandId: commandId,
     }));
-    
+
     debug(`GetCommandInvocationOutput: ${JSON.stringify(response, null, 2)}`);
 
     if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation ended unexpectedly with status: "${response.Status}". Standard error content is printed below.`);
-        info(RED + "----- BEGIN STDERR CONTENT -----");
-        info(RED + (response.StandardErrorContent ?? "").trim());
-        info(RED + "----- END STDERR CONTENT -----"); 
+        info(styles.red.open + styles.bold.open + "----- BEGIN STDERR CONTENT -----");
+        (response.StandardErrorContent ?? "").trim().split(/\r?\n/).forEach((line) => {
+            return info(styles.red.open + styles.bold.open + line);
+        });
+        info(styles.red.open + styles.bold.open + "----- END STDERR CONTENT -----");
 
         return response.ResponseCode ?? -1;
     }
 
     if (response.Status === "Success") {
         info("Remote command invocation completed successfully. Standard output content is printed below.");
-        info(CYAN + "----- BEGIN STDOUT CONTENT -----");
-        info(CYAN + (response.StandardOutputContent ?? "").trim());
-        info(CYAN + "----- END STDOUT CONTENT -----"); 
+        info(styles.cyan.open + "----- BEGIN STDOUT CONTENT -----");
+        (response.StandardOutputContent ?? "").trim().split(/\r?\n/).forEach((line) => {
+            return info(styles.cyan.open + line);
+        });
+        info(styles.cyan.open + "----- END STDOUT CONTENT -----");
 
         return response.ResponseCode ?? -1;
     }
