@@ -43,18 +43,15 @@ async function printCommandOutput(instanceId: string, commandId: string): Promis
     }));
     
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
+        if (response.StandardOutputContent) {
+            info(response.StandardOutputContent);
+        }
+
+        if (response.StandardErrorContent) {
+            error(response.StandardErrorContent);
+        }
+        
         return response.ResponseCode ?? -1;
-    }
-    
-    console.log("StandardOutputContent", response.StandardOutputContent);
-    console.log("StandardErrorContent", response.StandardErrorContent);
-
-    if (response.StandardOutputContent) {
-        info(response.StandardOutputContent);
-    }
-
-    if (response.StandardErrorContent) {
-        error(response.StandardErrorContent);
     }
 
     return printCommandOutput(instanceId, commandId);
