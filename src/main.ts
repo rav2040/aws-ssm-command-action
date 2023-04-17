@@ -1,4 +1,4 @@
-import { getBooleanInput, getInput, setOutput, setFailed, info, error } from "@actions/core";
+import { getBooleanInput, getInput, setOutput, setFailed, info } from "@actions/core";
 import { SSMClient, SendCommandCommand, GetCommandInvocationCommand } from "@aws-sdk/client-ssm";
 
 const ssm = new SSMClient({});
@@ -24,37 +24,49 @@ async function main() {
 
         if (sendCommandResponse.$metadata.httpStatusCode !== 200 || !commandId) return;
 
-        const exitCode = await printCommandOutput(instanceId, commandId);
+        info("Waiting for remote command invocation to complete...");
+
+        const exitCode = await waitSendCommand(instanceId, commandId);
 
         if (exitCode !== undefined) {
             setOutput("exit-code", exitCode);
         }
+
+        info(`Remote command invocation has completed with exit code: ${exitCode}`);
     } catch (err) {
         if (err instanceof Error) setFailed(err);
     }
 }
 
-async function printCommandOutput(instanceId: string, commandId: string): Promise<number | undefined> {
+async function waitSendCommand(instanceId: string, commandId: string): Promise<number> {
     await sleep(5);
 
     const response = await ssm.send(new GetCommandInvocationCommand({
         InstanceId: instanceId,
         CommandId: commandId,
     }));
-    
-    if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
-        if (response.StandardOutputContent) {
-            info(response.StandardOutputContent);
+
+    if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
+        throw Error(`Remote command invocation ended unexpectedly with status: "${response.Status}"`);
+    }
+
+    if (response.Status === "Success") {
+        if (response.ResponseCode === 0) {
+            info("Remote command invocation completed successfully. Standard output content is printed below.\n\n");
+            info(response.StandardOutputContent ?? "");
         }
 
-        if (response.StandardErrorContent) {
-            error(response.StandardErrorContent);
+        if (response.ResponseCode !== 0) {
+            info(`Remote command invocation completed with a non-zero exit code (${response.ResponseCode}). Standard error content is printed below.\n\n`);
+            info(response.StandardErrorContent ?? "");
         }
-        
+
         return response.ResponseCode ?? -1;
     }
 
-    return printCommandOutput(instanceId, commandId);
+    info("Still waiting...");
+
+    return waitSendCommand(instanceId, commandId);
 }
 
 function sleep(n: number) {
