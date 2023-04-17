@@ -51,24 +51,11 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
 
     debug(`GetCommandInvocationOutput: ${JSON.stringify(response, null, 2)}`);
 
-    if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
-        info(`Remote command invocation ended unexpectedly with status: "${response.Status}". Standard error content is printed below.`);
-        info(styles.red.open + styles.bold.open + "----- BEGIN STDERR CONTENT -----");
-        (response.StandardErrorContent ?? "").trim().split(/\r?\n/).forEach((line) => {
-            return info(styles.red.open + styles.bold.open + line);
-        });
-        info(styles.red.open + styles.bold.open + "----- END STDERR CONTENT -----");
-
-        return response.ResponseCode ?? -1;
-    }
-
-    if (response.Status === "Success") {
-        info("Remote command invocation completed successfully. Standard output content is printed below.");
-        info(styles.cyan.open + "----- BEGIN STDOUT CONTENT -----");
-        (response.StandardOutputContent ?? "").trim().split(/\r?\n/).forEach((line) => {
-            return info(styles.cyan.open + line);
-        });
-        info(styles.cyan.open + "----- END STDOUT CONTENT -----");
+    if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
+        info(`Remote command invocation completed with status: "${response.Status}". Output is printed below.`);
+        
+        printStdout(response.StandardOutputContent ?? "");
+        printStderr(response.StandardOutputContent ?? "");
 
         return response.ResponseCode ?? -1;
     }
@@ -76,6 +63,22 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     info("Still waiting...");
 
     return waitSendCommand(instanceId, commandId);
+}
+
+function printStdout(content: string) {
+    info(styles.cyan.open + "----- BEGIN STDOUT CONTENT -----");
+    content.trim().split(/\r?\n/).forEach((line) => {
+        return info(styles.cyan.open + line);
+    });
+    info(styles.cyan.open + "----- END STDOUT CONTENT -----");
+}
+
+function printStderr(content: string) {
+    info(styles.red.open + styles.bold.open + "----- BEGIN STDERR CONTENT -----");
+    content.trim().split(/\r?\n/).forEach((line) => {
+        return info(styles.red.open + styles.bold.open + line);
+    });
+    info(styles.red.open + styles.bold.open + "----- END STDERR CONTENT -----");
 }
 
 function sleep(n: number) {
