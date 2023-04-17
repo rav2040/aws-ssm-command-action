@@ -41,6 +41,8 @@ async function printCommandOutput(instanceId: string, commandId: string): Promis
         InstanceId: instanceId,
         CommandId: commandId,
     }));
+    
+    console.log(response);
 
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         return response.ResponseCode ?? -1;
