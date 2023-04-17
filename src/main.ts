@@ -1,6 +1,9 @@
 import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
 import { SSMClient, SendCommandCommand, GetCommandInvocationCommand } from "@aws-sdk/client-ssm";
 
+const CYAN = "\u001b[38;5;6m";
+const RED = "\u001b[38;2;255;0;0m";
+
 const ssm = new SSMClient({});
 
 async function main() {
@@ -52,18 +55,18 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
 
     if (["Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation ended unexpectedly with status: "${response.Status}". Standard error content is printed below.`);
-        info("----- BEGIN STDERR CONTENT -----");
-        info("\u001b[38;2;255;0;0m" + (response.StandardErrorContent ?? "").trim());
-        info("----- END STDERR CONTENT -----"); 
+        info(RED + "----- BEGIN STDERR CONTENT -----");
+        info(RED + (response.StandardErrorContent ?? "").trim());
+        info(RED + "----- END STDERR CONTENT -----"); 
 
         return response.ResponseCode ?? -1;
     }
 
     if (response.Status === "Success") {
         info("Remote command invocation completed successfully. Standard output content is printed below.");
-        info("----- BEGIN STDOUT CONTENT -----");
-        info("\u001b[38;5;6m" + (response.StandardOutputContent ?? "").trim());
-        info("----- END STDOUT CONTENT -----"); 
+        info(CYAN + "----- BEGIN STDOUT CONTENT -----");
+        info(CYAN + (response.StandardOutputContent ?? "").trim());
+        info(CYAN + "----- END STDOUT CONTENT -----"); 
 
         return response.ResponseCode ?? -1;
     }
