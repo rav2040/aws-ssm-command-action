@@ -62,7 +62,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
             printStderr(response.StandardErrorContent);
         }
         
-        if (!response.StandardOutputContent && !response.StandardOutputContent) {
+        if (!response.StandardOutputContent && !response.StandardErrorContent) {
             console.info(null);
         }
         
