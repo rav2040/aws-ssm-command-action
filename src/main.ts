@@ -63,7 +63,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
         }
         
         if (!response.StandardOutputContent && !response.StandardErrorContent) {
-            console.info(null);
+            info(styles.gray.open + styles.bold.open + null);
         }
         
         return response.ResponseCode ?? -1;
