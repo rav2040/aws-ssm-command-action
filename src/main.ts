@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
 import {
     SSMClient,
@@ -28,7 +29,11 @@ async function main() {
         const sendCommandResponse = await ssm.send(new SendCommandCommand({
             DocumentName: powershell ? "AWS-RunPowerShellScript" : "AWS-RunShellScript",
             InstanceIds: [instanceId],
-            Parameters: { commands: [command] },
+            Parameters: { commands: [command, `echo ${randomUUID()}`] },
+            CloudWatchOutputConfig: {
+                CloudWatchOutputEnabled: true,
+                CloudWatchLogGroupName: `aws/ssm/${instanceId}/send-command-output`,
+            }
         }));
 
         debug(`SendCommandOutput: ${JSON.stringify(sendCommandResponse, null, 2)}`);
