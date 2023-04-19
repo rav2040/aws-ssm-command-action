@@ -11,6 +11,10 @@ inputs:
     description: Use powershell instead of a regular shell.
     required: false
     default: false
+  wait-for-agent:
+    description: Wait for the SSM agent on the remote host to be online.
+    required: false
+    default: false
 outputs:
   exit-code:
     description: The exit code of the remote command.

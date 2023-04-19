@@ -1,5 +1,10 @@
 import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
-import { SSMClient, SendCommandCommand, GetCommandInvocationCommand } from "@aws-sdk/client-ssm";
+import {
+    SSMClient,
+    DescribeInstanceInformationCommand,
+    SendCommandCommand,
+    GetCommandInvocationCommand,
+} from "@aws-sdk/client-ssm";
 import styles from "ansi-styles";
 
 const ssm = new SSMClient({});
@@ -9,10 +14,15 @@ async function main() {
         const command = getInput("command", { required: true });
         const instanceId = getInput("instance-id") || process.env.SSM_COMMAND_INSTANCE_ID;
         const powershell = getBooleanInput("powershell");
+        const waitForAgent = getBooleanInput("wait-for-agent");
 
         if (instanceId === undefined) {
             setFailed(Error("An instance ID must be provided."));
             return;
+        }
+
+        if (waitForAgent) {
+            await waitForSSMAgent(instanceId);
         }
 
         const sendCommandResponse = await ssm.send(new SendCommandCommand({
@@ -41,6 +51,22 @@ async function main() {
     }
 }
 
+async function waitForSSMAgent(instanceId: string): Promise<void> {
+    const response = await ssm.send(new DescribeInstanceInformationCommand({
+        Filters: [
+            {
+                Key: "InstanceIds",
+                Values: [instanceId],
+            },
+        ],
+    }));
+
+    if (response.InstanceInformationList?.[0].PingStatus !== "Online") {
+        await sleep(5);
+        return waitForSSMAgent(instanceId);
+    }
+}
+
 async function waitSendCommand(instanceId: string, commandId: string): Promise<number> {
     await sleep(5);
 
@@ -53,19 +79,19 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
 
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation completed with status: "${response.Status}". Output is printed below.`);
-        
+
         if (response.StandardOutputContent) {
             printStdout(response.StandardOutputContent);
         }
-        
+
         if (response.StandardErrorContent) {
             printStderr(response.StandardErrorContent);
         }
-        
+
         if (!response.StandardOutputContent && !response.StandardErrorContent) {
             info(styles.gray.open + styles.bold.open + null);
         }
-        
+
         return response.ResponseCode ?? -1;
     }
 
