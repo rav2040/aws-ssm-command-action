@@ -90,8 +90,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     debug(`GetCommandInvocationOutput: ${JSON.stringify(response, null, 2)}`);
 
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
-        info(`Remote command invocation completed with status: "${response.Status}". Output is printed below.`);
-
+        info(`Remote command invocation completed with status: "${response.Status}". Fetching output...`);
 
         if (response.StandardOutputContent) {
             const messages = await getLogMessages(response, "stdout");
@@ -104,7 +103,7 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
         }
 
         if (!response.StandardOutputContent && !response.StandardErrorContent) {
-            info(styles.gray.open + styles.bold.open + null);
+            info(styles.gray.open + styles.bold.open + "No output found.");
         }
 
         return response.ResponseCode ?? -1;
