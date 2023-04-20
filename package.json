@@ -1,6 +1,6 @@
 {
   "name": "aws-ssm-command-action",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": "Stuart Kennedy",
   "main": "lib/main.js",
   "license": "MIT",
