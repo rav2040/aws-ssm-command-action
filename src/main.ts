@@ -1,4 +1,5 @@
-import { randomUUID } from "crypto";
+import type { GetCommandInvocationCommandOutput } from "@aws-sdk/client-ssm";
+
 import { getBooleanInput, getInput, setOutput, setFailed, info, debug } from "@actions/core";
 import {
     SSMClient,
@@ -6,9 +7,11 @@ import {
     SendCommandCommand,
     GetCommandInvocationCommand,
 } from "@aws-sdk/client-ssm";
+import { CloudWatchLogsClient, GetLogEventsCommand } from "@aws-sdk/client-cloudwatch-logs";
 import styles from "ansi-styles";
 
 const ssm = new SSMClient({});
+const cloudWatchLogs = new CloudWatchLogsClient({});
 
 async function main() {
     try {
@@ -26,10 +29,12 @@ async function main() {
             await waitForSSMAgent(instanceId);
         }
 
+        const ssmDocumentName = powershell ? "AWS-RunPowerShellScript" : "AWS-RunShellScript";
+
         const sendCommandResponse = await ssm.send(new SendCommandCommand({
-            DocumentName: powershell ? "AWS-RunPowerShellScript" : "AWS-RunShellScript",
+            DocumentName: ssmDocumentName,
             InstanceIds: [instanceId],
-            Parameters: { commands: [command, `echo ${randomUUID()}`] },
+            Parameters: { commands: [command, "echo '==========END OF OUTPUT'=========='"] },
             CloudWatchOutputConfig: { CloudWatchOutputEnabled: true },
         }));
 
@@ -84,12 +89,15 @@ async function waitSendCommand(instanceId: string, commandId: string): Promise<n
     if (["Success", "Failed", "Cancelled", "TimedOut"].includes(response.Status ?? "")) {
         info(`Remote command invocation completed with status: "${response.Status}". Output is printed below.`);
 
+
         if (response.StandardOutputContent) {
-            printStdout(response.StandardOutputContent);
+            const messages = await getLogMessages(response, "stdout");
+            printStdout(messages.join(""));
         }
 
         if (response.StandardErrorContent) {
-            printStderr(response.StandardErrorContent);
+            const messages = await getLogMessages(response, "stderr");
+            printStderr(messages.join(""));
         }
 
         if (!response.StandardOutputContent && !response.StandardErrorContent) {
@@ -118,6 +126,27 @@ function printStderr(content: string) {
         return info(styles.red.open + styles.bold.open + line);
     });
     info(styles.red.open + styles.bold.open + "----- END STDERR CONTENT -----");
+}
+
+async function getLogMessages(commandInvocationOutput: GetCommandInvocationCommandOutput, stream: "stdout" | "stderr", token?: string): Promise<string[]> {
+    const {
+        DocumentName: documentName,
+        CommandId: commandId,
+        InstanceId: instanceId,
+        PluginName: pluginName,
+    } = commandInvocationOutput;
+
+    const response = await cloudWatchLogs.send(new GetLogEventsCommand({
+        logGroupName: "/aws/ssm/" + documentName,
+        logStreamName: `${commandId}/${instanceId}/${pluginName?.replace(":", "-")}/${stream}`,
+        nextToken: token,
+    }));
+
+    const result = (response.events ?? []).map((e) => e.message).filter((m): m is string => m !== undefined);
+
+    return response.nextForwardToken
+        ? result.concat(await getLogMessages(commandInvocationOutput, stream, response.nextForwardToken))
+        : result;
 }
 
 function sleep(n: number) {
