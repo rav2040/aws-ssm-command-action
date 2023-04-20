@@ -34,7 +34,7 @@ async function main() {
         const sendCommandResponse = await ssm.send(new SendCommandCommand({
             DocumentName: ssmDocumentName,
             InstanceIds: [instanceId],
-            Parameters: { commands: [command, "echo '==========END OF OUTPUT=========='"] },
+            Parameters: { commands: [command] },
             CloudWatchOutputConfig: { CloudWatchOutputEnabled: true },
         }));
 
@@ -130,7 +130,13 @@ function printStderr(content: string) {
     info(styles.red.open + styles.bold.open + "----- END STDERR CONTENT -----");
 }
 
-async function getLogMessages(commandInvocationOutput: GetCommandInvocationCommandOutput, stream: "stdout" | "stderr", token?: string): Promise<string[]> {
+async function getLogMessages(
+    commandInvocationOutput: GetCommandInvocationCommandOutput,
+    stream: "stdout" | "stderr",
+    token?: string
+): Promise<string[]> {
+    await sleep(1);
+
     const {
         DocumentName: documentName,
         CommandId: commandId,
@@ -149,7 +155,7 @@ async function getLogMessages(commandInvocationOutput: GetCommandInvocationComma
 
     const result = (response.events ?? []).map((e) => e.message).filter((m): m is string => m !== undefined);
 
-    return token === response.nextForwardToken
+    return token === response.nextBackwardToken
         ? result
         : result.concat(await getLogMessages(commandInvocationOutput, stream, response.nextForwardToken));
 }
