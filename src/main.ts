@@ -66,7 +66,7 @@ async function waitForSSMAgent(instanceId: string): Promise<void> {
         ],
     }));
 
-    if (response.InstanceInformationList?.[0].PingStatus !== "Online") {
+    if (response.InstanceInformationList?.[0]?.PingStatus !== "Online") {
         await sleep(5);
         return waitForSSMAgent(instanceId);
     }
