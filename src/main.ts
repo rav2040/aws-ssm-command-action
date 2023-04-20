@@ -138,13 +138,6 @@ async function getLogMessages(commandInvocationOutput: GetCommandInvocationComma
         PluginName: pluginName,
     } = commandInvocationOutput;
 
-    debug(`REQUEST_PROPS: ${JSON.stringify({
-        logGroupName: "/aws/ssm/" + documentName,
-        logStreamName: `${commandId}/${instanceId}/${pluginName?.replace(":", "-")}/${stream}`,
-        startFromHead: true,
-        nextToken: token,
-    }, null, 2)}`)
-
     const response = await cloudWatchLogs.send(new GetLogEventsCommand({
         logGroupName: "/aws/ssm/" + documentName,
         logStreamName: `${commandId}/${instanceId}/${pluginName?.replace(":", "-")}/${stream}`,
@@ -156,9 +149,9 @@ async function getLogMessages(commandInvocationOutput: GetCommandInvocationComma
 
     const result = (response.events ?? []).map((e) => e.message).filter((m): m is string => m !== undefined);
 
-    return response.nextForwardToken
-        ? result.concat(await getLogMessages(commandInvocationOutput, stream, response.nextForwardToken))
-        : result;
+    return token === response.nextForwardToken
+        ? result
+        : result.concat(await getLogMessages(commandInvocationOutput, stream, response.nextForwardToken));
 }
 
 function sleep(n: number) {
