@@ -145,6 +145,8 @@ async function getLogMessages(commandInvocationOutput: GetCommandInvocationComma
         nextToken: token,
     }));
 
+    debug(`GetLogEventsCommandOutput: ${JSON.stringify(response, null, 2)}`);
+
     const result = (response.events ?? []).map((e) => e.message).filter((m): m is string => m !== undefined);
 
     return response.nextForwardToken
