@@ -30,10 +30,7 @@ async function main() {
             DocumentName: powershell ? "AWS-RunPowerShellScript" : "AWS-RunShellScript",
             InstanceIds: [instanceId],
             Parameters: { commands: [command, `echo ${randomUUID()}`] },
-            CloudWatchOutputConfig: {
-                CloudWatchOutputEnabled: true,
-                CloudWatchLogGroupName: `aws/ssm/${instanceId}/send-command-output`,
-            }
+            CloudWatchOutputConfig: { CloudWatchOutputEnabled: true },
         }));
 
         debug(`SendCommandOutput: ${JSON.stringify(sendCommandResponse, null, 2)}`);
@@ -65,6 +62,8 @@ async function waitForSSMAgent(instanceId: string): Promise<void> {
             },
         ],
     }));
+
+    debug(`DescribeInstanceInformationOutput: ${JSON.stringify(response, null, 2)}`);
 
     if (response.InstanceInformationList?.[0]?.PingStatus !== "Online") {
         await sleep(5);
