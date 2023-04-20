@@ -138,9 +138,17 @@ async function getLogMessages(commandInvocationOutput: GetCommandInvocationComma
         PluginName: pluginName,
     } = commandInvocationOutput;
 
+    debug(`REQUEST_PROPS: ${JSON.stringify({
+        logGroupName: "/aws/ssm/" + documentName,
+        logStreamName: `${commandId}/${instanceId}/${pluginName?.replace(":", "-")}/${stream}`,
+        startFromHead: true,
+        nextToken: token,
+    }, null, 2)}`)
+
     const response = await cloudWatchLogs.send(new GetLogEventsCommand({
         logGroupName: "/aws/ssm/" + documentName,
         logStreamName: `${commandId}/${instanceId}/${pluginName?.replace(":", "-")}/${stream}`,
+        startFromHead: true,
         nextToken: token,
     }));
 
