@@ -155,7 +155,7 @@ async function getLogMessages(
 
     const result = (response.events ?? []).map((e) => e.message).filter((m): m is string => m !== undefined);
 
-    return token === response.nextBackwardToken
+    return token === response.nextForwardToken
         ? result
         : result.concat(await getLogMessages(commandInvocationOutput, stream, response.nextForwardToken));
 }
