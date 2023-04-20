@@ -34,7 +34,7 @@ async function main() {
         const sendCommandResponse = await ssm.send(new SendCommandCommand({
             DocumentName: ssmDocumentName,
             InstanceIds: [instanceId],
-            Parameters: { commands: [command, "echo '==========END OF OUTPUT'=========='"] },
+            Parameters: { commands: [command, "echo '==========END OF OUTPUT=========='"] },
             CloudWatchOutputConfig: { CloudWatchOutputEnabled: true },
         }));
 
@@ -58,7 +58,7 @@ async function main() {
     }
 }
 
-async function waitForSSMAgent(instanceId: string): Promise<void> {
+async function waitForSSMAgent(instanceId: string, i = 0): Promise<void> {
     const response = await ssm.send(new DescribeInstanceInformationCommand({
         Filters: [
             {
@@ -71,9 +71,12 @@ async function waitForSSMAgent(instanceId: string): Promise<void> {
     debug(`DescribeInstanceInformationOutput: ${JSON.stringify(response, null, 2)}`);
 
     if (response.InstanceInformationList?.[0]?.PingStatus !== "Online") {
+        info(i === 0 ? "Waiting for SSM agent to come online..." : "Still waiting...");
         await sleep(5);
-        return waitForSSMAgent(instanceId);
+        return waitForSSMAgent(instanceId, i + 1);
     }
+
+    info("SSM agent is online.")
 }
 
 async function waitSendCommand(instanceId: string, commandId: string): Promise<number> {
